@@ -69,9 +69,8 @@ Use LOW confidence when multiple causes remain possible.
 
 ## Rule 3 - Human Review Is Mandatory
 
-Every diagnosis must contain:
-
-"human_review_required": true
+Every diagnosis must contain a human_review object
+with "required": true.
 
 The AI must never claim that a fix was automatically applied.
 

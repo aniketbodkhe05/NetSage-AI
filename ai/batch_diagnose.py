@@ -40,9 +40,9 @@ if not API_KEY:
 
 client = genai.Client(
     api_key=API_KEY,
-    http_options={
-        "timeout": 30000
-    }
+   http_options={
+    "timeout": 120000
+}
 )
 
 
@@ -242,8 +242,7 @@ Return ONLY valid JSON using this structure:
 
     raw_output = None
 
-    MAX_RETRIES = 3
-
+    MAX_RETRIES = 2
     for attempt in range(1, MAX_RETRIES + 1):
 
         try:
@@ -583,7 +582,7 @@ Return ONLY valid JSON using this structure:
 
 
     # Small delay to avoid API limits
-    time.sleep(1)
+    time.sleep(3)
 
 
 # ============================================================

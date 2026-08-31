@@ -389,7 +389,7 @@ def render_sidebar(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             if selected:
                 filtered = filtered[filtered[decision_col].isin(selected)]
 
-        if st.button("Reset Filters", width="stretch"):
+        if st.button("Reset Filters", use_container_width=True):
             st.rerun()
 
         return filtered, page
@@ -487,7 +487,7 @@ def render_charts(df: pd.DataFrame) -> None:
                         xaxis=dict(gridcolor=BORDER),
                         yaxis=dict(gridcolor=BORDER),
                     )
-                    st.plotly_chart(fig,width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.bar_chart(counts)
             else:
@@ -518,7 +518,7 @@ def render_charts(df: pd.DataFrame) -> None:
                         height=300,
                         showlegend=True,
                     )
-                    st.plotly_chart(fig,width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.bar_chart(counts)
             else:
@@ -561,7 +561,7 @@ def render_ai_vs_human(df: pd.DataFrame, metrics: dict) -> None:
                 height=260,
                 yaxis=dict(gridcolor=BORDER),
             )
-            st.plotly_chart(fig,width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
         elif total_decided > 0:
             st.bar_chart(pd.Series(values, index=labels))
         else:
@@ -667,7 +667,7 @@ def render_case_explorer(df: pd.DataFrame) -> None:
         return
 
     table = view[display_cols].rename(columns=DISPLAY_COLUMN_MAP)
-    st.dataframe(table, width="stretch", hide_index=True, height=380)
+    st.dataframe(table, use_container_width=True, hide_index=True, height=380)
     st.caption(f"Showing {len(table)} of {len(df)} case(s).")
 
 

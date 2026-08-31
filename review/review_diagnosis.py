@@ -1,4 +1,3 @@
-
 import pandas as pd
 from pathlib import Path
 
@@ -9,29 +8,27 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-RESULT_FILE = PROJECT_ROOT / "data" / "ai_results.csv"
+AI_RESULT_FILE = PROJECT_ROOT / "data" / "ai_results.csv"
+HUMAN_REVIEW_FILE = PROJECT_ROOT / "data" / "human_review.csv"
 
 
 # ============================================================
-# 1. Check result file
+# 1. Check AI results
 # ============================================================
 
-if not RESULT_FILE.exists():
+if not AI_RESULT_FILE.exists():
     print("ERROR: ai_results.csv was not found.")
-    print(f"Expected location: {RESULT_FILE}")
+    print(f"Expected location: {AI_RESULT_FILE}")
     raise SystemExit(1)
 
 
 # ============================================================
-# 2. Load AI results safely
+# 2. Load original AI results
 # ============================================================
 
 try:
-    # IMPORTANT:
-    # Load every column as string so review updates
-    # do not cause pandas dtype errors.
     df = pd.read_csv(
-        RESULT_FILE,
+        AI_RESULT_FILE,
         dtype=str,
         keep_default_na=False
     )
@@ -42,38 +39,13 @@ except Exception as error:
     raise SystemExit(1)
 
 
-# ============================================================
-# 3. Check if dataset is empty
-# ============================================================
-
 if df.empty:
     print("ERROR: ai_results.csv is empty.")
-    print("Run the AI diagnosis engine first.")
     raise SystemExit(1)
 
 
 # ============================================================
-# 4. Ensure required review columns exist
-# ============================================================
-
-review_columns = [
-    "human_review_required",
-    "review_status",
-    "reviewer_decision",
-    "reviewer_notes"
-]
-
-for column in review_columns:
-
-    if column not in df.columns:
-        df[column] = ""
-
-    # Force the column to text
-    df[column] = df[column].fillna("").astype(str)
-
-
-# ============================================================
-# 5. Check important diagnosis columns
+# 3. Required AI columns
 # ============================================================
 
 required_columns = [
@@ -94,13 +66,11 @@ required_columns = [
 ]
 
 missing_columns = [
-    column
-    for column in required_columns
+    column for column in required_columns
     if column not in df.columns
 ]
 
 if missing_columns:
-
     print("\nERROR: Required columns are missing:")
 
     for column in missing_columns:
@@ -110,7 +80,49 @@ if missing_columns:
 
 
 # ============================================================
-# 6. Display available cases
+# 4. Load existing human review log
+# ============================================================
+
+review_columns = [
+    "case_id",
+    "human_review_required",
+    "review_status",
+    "reviewer_decision",
+    "reviewer_notes"
+]
+
+
+if HUMAN_REVIEW_FILE.exists():
+
+    review_df = pd.read_csv(
+        HUMAN_REVIEW_FILE,
+        dtype=str,
+        keep_default_na=False
+    )
+
+else:
+
+    review_df = pd.DataFrame(
+        columns=review_columns
+    )
+
+
+# Ensure required review columns exist
+
+for column in review_columns:
+
+    if column not in review_df.columns:
+        review_df[column] = ""
+
+    review_df[column] = (
+        review_df[column]
+        .fillna("")
+        .astype(str)
+    )
+
+
+# ============================================================
+# 5. Display available cases
 # ============================================================
 
 print("=" * 60)
@@ -121,16 +133,30 @@ print("\nAvailable AI diagnoses:\n")
 
 for index, row in df.iterrows():
 
+    existing_review = review_df[
+        review_df["case_id"].astype(str).str.upper()
+        == str(row["case_id"]).upper()
+    ]
+
+    if existing_review.empty:
+        status = "Pending"
+    else:
+        status = existing_review.iloc[0]["reviewer_decision"]
+
+        if status == "":
+            status = "Pending"
+
     print(
         f"{index + 1}. "
         f"{row['case_id']} | "
         f"{row['issue_type']} | "
-        f"{row['agreement']}"
+        f"AI Agreement: {row['agreement']} | "
+        f"Review: {status}"
     )
 
 
 # ============================================================
-# 7. Select case
+# 6. Select case
 # ============================================================
 
 case_id = input(
@@ -139,9 +165,7 @@ case_id = input(
 
 
 matches = df[
-    df["case_id"]
-    .astype(str)
-    .str.upper()
+    df["case_id"].astype(str).str.upper()
     == case_id
 ]
 
@@ -149,29 +173,18 @@ matches = df[
 if matches.empty:
 
     print(f"\nERROR: Case {case_id} was not found.")
-
-    print("\nAvailable case IDs:")
-
-    print(
-        ", ".join(
-            df["case_id"].astype(str).tolist()
-        )
-    )
-
     raise SystemExit(1)
 
 
-index = matches.index[0]
-
-case = df.loc[index]
+case = matches.iloc[0]
 
 
 # ============================================================
-# 8. Display AI diagnosis
+# 7. Display ORIGINAL AI diagnosis
 # ============================================================
 
 print("\n" + "=" * 60)
-print("AI DIAGNOSIS")
+print("ORIGINAL AI DIAGNOSIS")
 print("=" * 60)
 
 print(f"\nCase ID       : {case['case_id']}")
@@ -182,21 +195,18 @@ print(f"OSI Layer     : {case['osi_layer']}")
 print(f"Concept       : {case['concept']}")
 print(f"Severity      : {case['severity']}")
 
-
 print("\nEvidence:")
 print(case["evidence"])
 
-
 print("\nNext Command:")
 print(case["next_command"])
-
 
 print("\nFix Steps:")
 print(case["fix_steps"])
 
 
 # ============================================================
-# 9. Show reference answer
+# 8. Display reference answer
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -214,7 +224,7 @@ print(case["expected_fix"])
 
 
 # ============================================================
-# 10. Human review decision
+# 9. Human decision
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -241,9 +251,6 @@ decision_map = {
 if choice not in decision_map:
 
     print("\nERROR: Invalid decision.")
-
-    print("Please run the program again and select 1, 2, or 3.")
-
     raise SystemExit(1)
 
 
@@ -251,7 +258,7 @@ decision = decision_map[choice]
 
 
 # ============================================================
-# 11. Reviewer notes
+# 10. Reviewer notes
 # ============================================================
 
 notes = input(
@@ -260,27 +267,50 @@ notes = input(
 
 
 # ============================================================
-# 12. Save human review
+# 11. Update HUMAN REVIEW only
 # ============================================================
 
-# Everything is stored as STRING intentionally.
-df.loc[index, "human_review_required"] = "True"
+new_review = {
+    "case_id": case_id,
+    "human_review_required": "True",
+    "review_status": "Completed",
+    "reviewer_decision": decision,
+    "reviewer_notes": notes
+}
 
-df.loc[index, "review_status"] = "Completed"
 
-df.loc[index, "reviewer_decision"] = decision
+existing_index = review_df[
+    review_df["case_id"].astype(str).str.upper()
+    == case_id
+].index
 
-df.loc[index, "reviewer_notes"] = notes
+
+if len(existing_index) > 0:
+
+    index = existing_index[0]
+
+    for column in review_columns:
+        review_df.loc[index, column] = new_review[column]
+
+else:
+
+    review_df = pd.concat(
+        [
+            review_df,
+            pd.DataFrame([new_review])
+        ],
+        ignore_index=True
+    )
 
 
 # ============================================================
-# 13. Save CSV
+# 12. Save separate human review log
 # ============================================================
 
 try:
 
-    df.to_csv(
-        RESULT_FILE,
+    review_df.to_csv(
+        HUMAN_REVIEW_FILE,
         index=False
     )
 
@@ -288,55 +318,28 @@ except Exception as error:
 
     print("\nERROR: Could not save human review.")
     print(error)
-
     raise SystemExit(1)
 
 
 # ============================================================
-# 14. Verify saved data
+# 13. Verify separation
 # ============================================================
 
-try:
+print("\n" + "=" * 60)
+print("HUMAN REVIEW SAVED")
+print("=" * 60)
 
-    verification_df = pd.read_csv(
-        RESULT_FILE,
-        dtype=str,
-        keep_default_na=False
-    )
+print(f"\nCase       : {case_id}")
+print(f"Decision   : {decision}")
+print(f"Status     : Completed")
+print(f"Notes      : {notes}")
 
-    saved_row = verification_df[
-        verification_df["case_id"].astype(str).str.upper()
-        == case_id
-    ]
+print("\nOriginal AI results:")
+print(f"  {AI_RESULT_FILE}")
 
-    if saved_row.empty:
+print("\nHuman review log:")
+print(f"  {HUMAN_REVIEW_FILE}")
 
-        print("\nWARNING: Review was saved but verification failed.")
+print("\nOriginal AI diagnosis was NOT modified.")
 
-    else:
-
-        saved = saved_row.iloc[0]
-
-        print("\n" + "=" * 60)
-        print("HUMAN REVIEW SAVED")
-        print("=" * 60)
-
-        print(f"\nCase       : {case_id}")
-        print(f"Decision   : {saved['reviewer_decision']}")
-        print(f"Status     : {saved['review_status']}")
-        print(f"Notes      : {saved['reviewer_notes']}")
-
-        print(
-            "\nHuman review requirement: SATISFIED"
-        )
-
-        print("\nSaved to:")
-        print(RESULT_FILE)
-
-        print("=" * 60)
-
-except Exception as error:
-
-    print("\nWARNING: Review was saved, but verification failed.")
-    print(error)
-
+print("=" * 60)
