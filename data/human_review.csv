@@ -1,0 +1,33 @@
+case_id,human_review_required,review_status,reviewer_decision,reviewer_notes
+C016,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C001,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C002,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C003,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C004,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C005,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C006,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C007,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C008,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C009,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C010,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C011,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C012,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C013,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C014,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C015,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C017,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C018,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C019,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C020,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C022,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C023,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C024,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C025,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C026,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C027,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C028,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C029,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.
+C030,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C031,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C032,True,Completed,Edited,Human corrected the AI diagnosis after comparing it with the provided network evidence and reference answer.
+C021,True,Completed,Accepted,Human reviewed AI diagnosis and evidence.

@@ -6,7 +6,9 @@ from pathlib import Path
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_FILE = BASE_DIR / "data" / "ai_results.csv"
+
+AI_FILE = BASE_DIR / "data" / "ai_results.csv"
+REVIEW_FILE = BASE_DIR / "data" / "human_review.csv"
 
 
 def main():
@@ -15,25 +17,136 @@ def main():
     print("              NETSAGE AI - FINAL EVALUATION")
     print("=" * 70)
 
-    if not DATA_FILE.exists():
-        print(f"\nERROR: File not found:")
-        print(DATA_FILE)
+    # --------------------------------------------------------
+    # Check files
+    # --------------------------------------------------------
+
+    if not AI_FILE.exists():
+        print(f"\nERROR: AI results file not found:")
+        print(AI_FILE)
         return
 
-    df = pd.read_csv(DATA_FILE, dtype=str).fillna("")
+    if not REVIEW_FILE.exists():
+        print(f"\nERROR: Human review file not found:")
+        print(REVIEW_FILE)
+        return
 
-    total = len(df)
+    # --------------------------------------------------------
+    # Load original AI results
+    # --------------------------------------------------------
 
-    completed = (
-        df["review_status"]
-        .str.strip()
-        .str.lower()
-        .eq("completed")
-        .sum()
+    ai_df = pd.read_csv(
+        AI_FILE,
+        dtype=str,
+        keep_default_na=False
     )
 
+    # --------------------------------------------------------
+    # Load separate human review file
+    # --------------------------------------------------------
+
+    review_df = pd.read_csv(
+        REVIEW_FILE,
+        dtype=str,
+        keep_default_na=False
+    )
+
+    total = len(ai_df)
+
+    # --------------------------------------------------------
+    # Validate required columns
+    # --------------------------------------------------------
+
+    ai_required = [
+        "case_id",
+        "issue_type",
+        "agreement",
+        "ai_root_cause",
+        "confidence",
+        "osi_layer",
+        "concept",
+        "severity",
+        "evidence",
+        "next_command",
+        "fix_steps",
+        "expected_fault",
+        "expected_next_command",
+        "expected_fix"
+    ]
+
+    review_required = [
+        "case_id",
+        "human_review_required",
+        "review_status",
+        "reviewer_decision",
+        "reviewer_notes"
+    ]
+
+    missing_ai = [
+        column for column in ai_required
+        if column not in ai_df.columns
+    ]
+
+    missing_review = [
+        column for column in review_required
+        if column not in review_df.columns
+    ]
+
+    if missing_ai:
+        print("\nERROR: Missing columns in ai_results.csv:")
+        for column in missing_ai:
+            print(f" - {column}")
+        return
+
+    if missing_review:
+        print("\nERROR: Missing columns in human_review.csv:")
+        for column in missing_review:
+            print(f" - {column}")
+        return
+
+    # --------------------------------------------------------
+    # Normalize case IDs
+    # --------------------------------------------------------
+
+    ai_df["case_id"] = (
+        ai_df["case_id"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
+
+    review_df["case_id"] = (
+        review_df["case_id"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
+
+    # --------------------------------------------------------
+    # Find missing reviews
+    # --------------------------------------------------------
+
+    missing_reviews = ai_df[
+        ~ai_df["case_id"].isin(review_df["case_id"])
+    ]
+
+    completed = len(ai_df[
+        ai_df["case_id"].isin(
+            review_df[
+                review_df["review_status"]
+                .str.strip()
+                .str.lower()
+                .eq("completed")
+            ]["case_id"]
+        )
+    ])
+
+    # --------------------------------------------------------
+    # Human review counts
+    # --------------------------------------------------------
+
     accepted = (
-        df["reviewer_decision"]
+        review_df["reviewer_decision"]
         .str.strip()
         .str.lower()
         .eq("accepted")
@@ -41,7 +154,7 @@ def main():
     )
 
     edited = (
-        df["reviewer_decision"]
+        review_df["reviewer_decision"]
         .str.strip()
         .str.lower()
         .eq("edited")
@@ -49,15 +162,19 @@ def main():
     )
 
     rejected = (
-        df["reviewer_decision"]
+        review_df["reviewer_decision"]
         .str.strip()
         .str.lower()
         .eq("rejected")
         .sum()
     )
 
+    # --------------------------------------------------------
+    # AI classification
+    # --------------------------------------------------------
+
     likely_match = (
-        df["agreement"]
+        ai_df["agreement"]
         .str.strip()
         .str.lower()
         .eq("likely match")
@@ -65,7 +182,7 @@ def main():
     )
 
     human_review = (
-        df["agreement"]
+        ai_df["agreement"]
         .str.strip()
         .str.lower()
         .eq("needs human review")
@@ -87,6 +204,21 @@ def main():
     print(f"Rejected                 : {rejected}")
 
     # --------------------------------------------------------
+    # Missing reviews
+    # --------------------------------------------------------
+
+    if len(missing_reviews) > 0:
+
+        print("\nMissing Reviews:")
+
+        for case_id in missing_reviews["case_id"]:
+            print(f"  - {case_id}")
+
+    else:
+
+        print("\nAll cases have a human review.")
+
+    # --------------------------------------------------------
     # AI Classification
     # --------------------------------------------------------
 
@@ -97,8 +229,15 @@ def main():
     print(f"Likely Match             : {likely_match}")
     print(f"Needs Human Review       : {human_review}")
 
-    likely_rate = (likely_match / total) * 100 if total else 0
-    review_rate = (human_review / total) * 100 if total else 0
+    likely_rate = (
+        likely_match / total * 100
+        if total else 0
+    )
+
+    review_rate = (
+        human_review / total * 100
+        if total else 0
+    )
 
     print(f"Likely Match Rate        : {likely_rate:.2f}%")
     print(f"Human Review Rate        : {review_rate:.2f}%")
@@ -111,13 +250,35 @@ def main():
     print("HUMAN REVIEW")
     print("-" * 70)
 
-    acceptance_rate = (accepted / total) * 100 if total else 0
-    edit_rate = (edited / total) * 100 if total else 0
-    rejection_rate = (rejected / total) * 100 if total else 0
+    acceptance_rate = (
+        accepted / total * 100
+        if total else 0
+    )
 
-    print(f"Accepted                 : {accepted} ({acceptance_rate:.2f}%)")
-    print(f"Edited                   : {edited} ({edit_rate:.2f}%)")
-    print(f"Rejected                 : {rejected} ({rejection_rate:.2f}%)")
+    edit_rate = (
+        edited / total * 100
+        if total else 0
+    )
+
+    rejection_rate = (
+        rejected / total * 100
+        if total else 0
+    )
+
+    print(
+        f"Accepted                 : "
+        f"{accepted} ({acceptance_rate:.2f}%)"
+    )
+
+    print(
+        f"Edited                   : "
+        f"{edited} ({edit_rate:.2f}%)"
+    )
+
+    print(
+        f"Rejected                 : "
+        f"{rejected} ({rejection_rate:.2f}%)"
+    )
 
     # --------------------------------------------------------
     # Issue Type Distribution
@@ -127,7 +288,7 @@ def main():
     print("ISSUE TYPE DISTRIBUTION")
     print("-" * 70)
 
-    issue_counts = df["issue_type"].value_counts()
+    issue_counts = ai_df["issue_type"].value_counts()
 
     for issue, count in issue_counts.items():
         print(f"{issue:<20} : {count}")
@@ -140,7 +301,7 @@ def main():
     print("SEVERITY DISTRIBUTION")
     print("-" * 70)
 
-    severity_counts = df["severity"].value_counts()
+    severity_counts = ai_df["severity"].value_counts()
 
     for severity, count in severity_counts.items():
         print(f"{severity:<20} : {count}")
@@ -153,8 +314,8 @@ def main():
     print("HUMAN CORRECTIONS")
     print("-" * 70)
 
-    corrected = df[
-        df["reviewer_decision"]
+    corrected = review_df[
+        review_df["reviewer_decision"]
         .str.strip()
         .str.lower()
         .eq("edited")
@@ -163,10 +324,38 @@ def main():
     print(f"Cases requiring edits  : {len(corrected)}")
 
     if len(corrected) > 0:
+
         print("\nEdited Cases:")
 
         for case_id in corrected["case_id"]:
             print(f"  - {case_id}")
+
+    # --------------------------------------------------------
+    # Requirement checks
+    # --------------------------------------------------------
+
+    print("\n" + "-" * 70)
+    print("REQUIREMENT CHECKS")
+    print("-" * 70)
+
+    cases_pass = total >= 30
+    review_pass = completed == total
+    correction_pass = edited >= 5
+
+    print(
+        f"[{'PASS' if cases_pass else 'FAIL'}] "
+        f"At least 30 troubleshooting cases"
+    )
+
+    print(
+        f"[{'PASS' if review_pass else 'FAIL'}] "
+        f"Human review completed for all cases"
+    )
+
+    print(
+        f"[{'PASS' if correction_pass else 'FAIL'}] "
+        f"At least 5 human-corrected AI responses"
+    )
 
     # --------------------------------------------------------
     # Final Status
@@ -174,7 +363,11 @@ def main():
 
     print("\n" + "=" * 70)
 
-    if completed == total:
+    if (
+        cases_pass
+        and review_pass
+        and correction_pass
+    ):
         print("FINAL EVALUATION STATUS: COMPLETE")
     else:
         print("FINAL EVALUATION STATUS: INCOMPLETE")
